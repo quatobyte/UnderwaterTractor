@@ -1,0 +1,451 @@
+PShape rocket;
+import controlP5.*;
+import gab.opencv.*;
+import processing.video.*;
+import java.awt.*;
+import processing.serial.*;
+import processing.net.*;
+Serial myPort;  // Create object from Serial class
+ControlP5 cp5;
+Capture video;
+OpenCV opencv;
+Client ck;
+int []  cmd = {0,0,0,0,0,0,0,0};
+String data;
+String transmitt = "";
+int ct =0;
+long timer = 0;
+int REV1 = 1, REV2 = 1;
+int ARM_1 = 1, ARM_2 = 1;
+int THROTTLE_1 = 0, THROTTLE_2 = 0;
+String cm ;
+String [] lm = {"101","102","103","104"}  ;
+int y = 0;
+int LIGHT = 1;
+int AUTOPILOT = 1;
+int time = 0;
+long tm = 0;
+int a1,a2;
+
+String [] arms1 = {"M1 DISARMED","M1 ARMED"} ;
+String [] arms2 = {"M2 DISARMED","M2 ARMED"} ;
+
+
+String [] rever1 = {"M1 NON REVERSED","M1 REVERSED"} ;
+String [] rever2 = {"M2 NON REVERSED","M2 REVERSED"} ;
+
+String [] ap = {"AP DISABLED","AP ENABLED"} ;
+
+String portName;
+String textValue = "";
+long a;
+
+Slider THR1;
+Slider THR2;
+Slider AP_SEC;
+Slider STEER;
+
+Toggle rv1;
+Toggle rv2;
+
+int yrv1 =0;
+int yrv2 =0;
+
+int THRTL1 = 0;
+int THRTL2 = 0;
+
+float[] arm = {0,0,0,0} ;
+float p = 0;
+
+int sh = 0;
+int index= 0;
+
+
+void setup() {
+          portName = "COM6";
+    myPort = new Serial(this, portName, 9600);
+    myPort.bufferUntil('\n');
+  
+  
+   String[] cameras = Capture.list();
+
+  ck = new Client(this, "169.254.1.10" , 2000);
+   
+  video = new Capture(this, 640, 480);
+    video = new Capture(this, cameras[0]);
+  opencv = new OpenCV(this, 640, 480);
+  opencv.loadCascade(OpenCV.CASCADE_FRONTALFACE);  
+background(0);
+  video.start();
+  size(1060,600);
+  noStroke();
+  cp5 = new ControlP5(this);
+
+  // create a new button with name 'buttonA'
+  cp5.addButton("FILL_BALLAST")
+     .setValue(0)
+     .setPosition(640,0)
+     .setSize(200,60)
+     ;
+  
+  // and add another 2 buttons
+  cp5.addButton("DRAIN_BALLAST")
+     .setValue(100)
+     .setPosition(840,0)
+     .setSize(200,60)
+     ;
+     
+  cp5.addButton("BALLAST_LEFT")
+     .setValue(0)
+     .setPosition(640,70)
+     .setSize(200,60)
+     ;
+  
+  // and add another 2 buttons
+  cp5.addButton("BALLAST_RIGHT")
+     .setValue(100)
+     .setPosition(840,70)
+     .setSize(200,60)
+     ;
+
+       cp5.addToggle("LIGHT")
+     .setPosition(640,140)
+     .setSize(420,60)
+     .setValue(false)
+     //.setMode(ControlP5.SWITCH)
+     ;
+       cp5.addToggle("ARM_M1")
+     .setPosition(640,230)
+     .setSize(200,60)
+     .setValue(false)
+   //  .setMode(ControlP5.SWITCH)
+     ;
+       cp5.addToggle("ARM_M2")
+     .setPosition(850,230)
+     .setSize(200,60)
+     .setValue(false)
+ //    .setMode(ControlP5.SWITCH)
+     ;
+     
+      THR1= cp5.addSlider("THROTTLE_1")
+     .setPosition(640,310)
+     .setSize(200,20)
+     .setRange(0,255)
+     .setValue(0)
+     ;
+     
+   rv1   = cp5.addToggle("REVERS_M1")
+     .setPosition(900,310)
+     .setSize(70,20)
+     .setValue(false)
+   //  .setMode(ControlP5.SWITCH)
+     ;
+     
+      THR2= cp5.addSlider("THROTTLE_2")
+      .setPosition(640,360)
+     .setSize(200,19)
+     .setRange(0,255)
+     .setValue(0)
+     ;
+     rv2 =       cp5.addToggle("REVERS_M2")
+     .setPosition(900,360)
+     .setSize(70,19)
+     .setValue(false)
+   //  .setMode(ControlP5.SWITCH)
+     ;
+            cp5.addToggle("AUTOPILOT")
+     .setPosition(640,400)
+     .setSize(420,60)
+     .setValue(false)
+ //    .setMode(ControlP5.SWITCH)
+     ;
+     
+            cp5.addSlider("AP_TIME_SEC")
+      .setPosition(640,480)
+     .setSize(200,20)
+     .setRange(0,600)
+     .setValue(0)
+     ;
+            cp5.addSlider("STEER_ANGLE_DEG")
+      .setPosition(640,510)
+     .setSize(200,20)
+     .setRange(0,600)
+     .setValue(0)
+     ;
+}
+void draw() { 
+      if(myPort.available()>0){
+//x = myPort.read();
+//p = int(x);
+
+    } 
+  
+      while(sh<4){
+     print(arm[sh]); 
+     print("/"); 
+      sh++;
+    }
+    sh =0;
+    println();
+    //THRTL1 = 0;
+    //THRTL2 = 0;
+    
+    
+    if((arm[0]>-40)&&(arm[0]<0)){
+      a1 =0;
+    }
+    if((arm[1]>-40)&&(arm[1]<0)){
+      a2 =0;
+    }
+    if(arm[0]>0){
+      a1 =1;
+    }
+    if(arm[1]>0){
+      a2 =1;
+    }
+    if(arm[0]<-40){
+      a1 =-1;
+    }
+    if(arm[1]<-40){
+      a2 =-1;
+    }
+  
+  THRTL1 = int(THR1.getValue());
+ THRTL2 = int(THR2.getValue());
+  
+ THR1.setValue(THRTL1+ 1*a1);
+ THR2.setValue(THRTL2+ 1*a2);
+ 
+ //rv1.setValue(yrv2);
+// rv2.setValue(yrv1);
+ 
+ if(millis() - tm> 200){
+   
+    if(arm[2] ==10){
+   yrv1 ++;
+   if(yrv1>1){
+     yrv1 =0;
+   }
+ }
+ 
+  if(arm[2] ==1){
+   yrv2 ++;
+   
+   if(yrv2>1){
+     yrv2 =0;
+   }
+ }
+   tm = millis();
+ }
+
+ 
+ 
+ if(key == 'A' ){  
+   THRTL1--;
+ }
+  if(key == 'Q' ){
+   THRTL1++;
+ }
+ 
+ 
+  if(key == 'D' ){  
+   THRTL2--;
+ }
+  if(key == 'E' ){
+   THRTL2++;
+ }
+ 
+String val;
+/*
+if(millis() - a > 2000){
+        myPort.write(lm[y]);
+        y++;
+  a = millis();
+}
+*/
+if(y>3){
+  y = 0;
+}
+
+  if( ARM_1 == 1){
+     lm[1] = str(THROTTLE_1 * 100 + 2);
+  }
+  else{
+    lm[1] = "2";
+    cmd[1] =  0;
+  }
+  if( ARM_2 == 1){
+      lm[2] = str(THROTTLE_2 * 100 + 3);
+  }
+  else{
+    lm[2] = "3";
+    cmd[2] = 0;
+  }
+
+if(ct<8){
+ transmitt = str(cmd[ct])+ '0'+str(ct)+"x";
+ ck.write(transmitt);
+  ct++;
+}
+else{
+
+   ct = 0;
+}
+ if(millis() - timer > 1000){
+     cmd[0] = 0;
+   timer = millis();
+ }
+
+
+lm[3] = str(time * 100 + 4);
+  opencv.loadImage(video);
+
+  image(video, 0, 0 );
+
+
+}
+
+
+
+// function colorC will receive changes from 
+// controller with name colorC
+void captureEvent(Capture c) {
+  c.read();
+}
+public void controlEvent(ControlEvent theEvent) {  
+ //  myPort.write(cm);
+  
+
+}
+public void FILL_BALLAST(int theValue) {
+lm[0] = "101";
+cmd[0] = 1;
+
+}
+
+public void DRAIN_BALLAST(int theValue) {
+lm[0] = "201";
+cmd[0] = 2;
+}
+
+public void BALLAST_LEFT(int theValue) {
+lm[0] = "301";
+cmd[0] = 3;
+}
+
+public void BALLAST_RIGHT(int theValue) {
+lm[0] = "401";  
+cmd[0] = 4;
+}
+
+void THROTTLE_1(float gas1) {
+  if( ARM_1 == 1){
+      THROTTLE_1 = int(gas1);
+      cmd[1] = int(gas1);
+  }
+
+}
+void THROTTLE_2(float gas2) {
+  if( ARM_2 == 1){
+      THROTTLE_2 = int(gas2);
+      cmd[2] = int(gas2);
+  }
+
+}
+void LIGHT(boolean lght) {
+   LIGHT ++;
+   if( LIGHT > 1){
+      LIGHT  = 0;
+   }
+   
+ if(LIGHT == 0){
+   lm[0] = "501";
+   cmd[0] = 5;
+   
+ }
+ else{
+  cmd[0] = 6;
+   lm[0] = "601";
+ }
+}
+
+void ARM_M1(boolean arm_1) {
+   ARM_1 ++;
+   if( ARM_1 > 1){
+      ARM_1  = 0;
+   }
+}
+
+
+void ARM_M2(boolean arm_2) {
+   ARM_2 ++;
+   if( ARM_2 > 1){
+      ARM_2  = 0;
+   }
+}
+
+
+
+void REVERS_M1(boolean rv_1) {
+   REV1 ++;
+   if( REV1 > 1){
+      REV1  = 0;
+   }
+   if(REV1 == 0){
+     lm[0] = "701";
+     cmd[0] = 7;
+   }
+   else{
+     lm[0] = "801";
+     cmd[0] = 8;
+   }
+}
+void REVERS_M2(boolean rv_2) {
+   REV2 ++;
+   if( REV2 > 1){
+      REV2  = 0;
+   }
+   if(REV2 == 0){
+     lm[0] = "901";
+     cmd[0] = 9;
+   }
+   else{
+     lm[0] = "1001";
+     cmd[0] = 10;
+   }
+}
+
+
+
+void AUTOPILOT(boolean apr) {
+   AUTOPILOT ++;
+   if( AUTOPILOT > 1){
+      AUTOPILOT  = 0;
+   }
+   if(AUTOPILOT == 0){
+     lm[0] = "1101";
+     cmd[0] = 11;
+   }
+   else{
+     lm[0] = "1201";
+     cmd[0] = 12;
+   }
+ 
+}
+void AP_TIME_SEC (float tm) {
+  
+      time= int(tm);
+      //  println(time );
+}
+void serialEvent(Serial myPort) {
+ p= float(myPort.readStringUntil('\n'));
+ index = int(p%100);
+ if(index!=2){
+   arm[index] = map(int(p/100)+50,0,4095,-255,255);
+ }
+ else{
+   arm[index] = int(p/100);
+ }
+ 
+ 
+}

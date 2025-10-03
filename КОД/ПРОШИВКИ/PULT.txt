@@ -1,0 +1,28 @@
+const int JOY [4] = {32,35,34,33};
+int JOYdata [4] = {0,0,0,0};
+int jcout = 0;
+int granica = 0;
+int motormode [2] = {0,0};
+int gas [2] = {0,0};
+int LIGHT = 0;
+int ARM = 0;
+void setup() {
+  // put your setup code here, to run once:
+Serial.begin(9600);
+pinMode(19,INPUT_PULLUP);
+pinMode(18,INPUT_PULLUP);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+while(jcout<4){
+  JOYdata[jcout] = analogRead(JOY[jcout]);
+
+  jcout++;
+}
+  Serial.println(JOYdata[0]*100+0);
+  Serial.println(JOYdata[2]*100+1);
+  Serial.println((digitalRead(19)*10+ digitalRead(18))*100+2);
+  
+jcout=0;
+}
